@@ -1,30 +1,13 @@
 import pandas as pd
-import re
-import nltk
 import tkinter as tk
 from tkinter import ttk, scrolledtext, Frame, Label
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from nltk.corpus import stopwords, wordnet
-from nltk.stem import SnowballStemmer
 from utilis import preprocess, expand_keywords, preprocess_words, identificar_topicos
 from collections import Counter
 import random
 
-nltk.download('stopwords')
-nltk.download('wordnet')
-
-# Pré-processamento
-stop_words = set(stopwords.words('english'))
-stemmer = SnowballStemmer('english')
-
-def preprocess(text):
-    text = re.sub(r'[^a-zA-Z\s]', '', text)
-    text = text.lower()
-    tokens = [stemmer.stem(word) for word in text.split() if word not in stop_words]
-    return ' '.join(tokens)
-
-# Tópicos 
+# Tópicos
 topics = {
     "location": ["location", "neighborhood", "area", "close", "near", "distance"],
     "staff": ["staff", "employee", "service", "reception", "friendly", "helpful"],
@@ -40,14 +23,20 @@ topics = {
 topics_expanded = {k: expand_keywords(v) for k, v in topics.items()}
 topics_stemmed = {k: preprocess_words(words) for k, words in topics_expanded.items()}
 
-# Carregamento dos dados 
+# Carregamento dos dados
 df = pd.read_csv("tripadvisor_hotel_reviews.csv")
 df_sample = df.sample(n=1000, random_state=42).reset_index(drop=True)
 df_sample['clean_review'] = df_sample['Review'].apply(preprocess)
 df_sample['topics'] = df_sample['clean_review'].apply(lambda x: identificar_topicos(x, topics_stemmed))
 
-# TF-IDF treinado no corpus completo, similaridade com reviews relevantes
-vectorizer = TfidfVectorizer()
+# TF-IDF Vectorizer
+vectorizer = TfidfVectorizer(
+    max_features=5000,
+    min_df=2,
+    max_df=0.95,
+    ngram_range=(1, 2),
+    sublinear_tf=True
+)
 tfidf_matrix = vectorizer.fit_transform(df_sample['clean_review'])
 
 # Interface gráfica
